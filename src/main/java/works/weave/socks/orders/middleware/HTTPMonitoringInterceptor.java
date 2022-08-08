@@ -28,7 +28,7 @@ public class HTTPMonitoringInterceptor implements HandlerInterceptor {
     private static final String startTimeKey = "startTime";
     @Autowired
     ResourceMappings mappings;
-    @Autowired
+    @Autowired(required = false)
     JpaHelper jpaHelper;
     @Autowired
     RepositoryRestConfiguration repositoryConfiguration;
