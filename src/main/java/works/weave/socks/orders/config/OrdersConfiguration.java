@@ -6,9 +6,9 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class OrdersConfiguration {
-    @Bean
-    @ConditionalOnMissingBean(OrdersConfigurationProperties.class)
-    public OrdersConfigurationProperties frameworkMesosConfigProperties() {
-        return new OrdersConfigurationProperties();
-    }
+  @Bean
+  @ConditionalOnMissingBean(OrdersConfigurationProperties.class)
+  public OrdersConfigurationProperties frameworkMesosConfigProperties() {
+    return new OrdersConfigurationProperties();
+  }
 }
