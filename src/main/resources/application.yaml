@@ -1,23 +1,32 @@
 server:
   port: ${port:8080}
+  error:
+    include-message: ALWAYS
+    include-stacktrace: NEVER    
 spring:
   application:
     name: orders
   data:
     mongodb:
-      uri: mongodb://${db:orders-db}:27017/data
-  zipkin:
-    base-url: http://${zipkin_host:zipkin}:9411/
-    enabled: ${zipkin_enabled:false}
-  sleuth:
-    sampler:
-      probability: 1.0  
+      uri: ${MONGODB_CONNECTION_STRING:mongodb://localhost:27017}
+      database: orders
+#  zipkin:
+#    base-url: http://${zipkin_host:zipkin}:9411/
+#    enabled: ${zipkin_enabled:false}
+#  sleuth:
+#    sampler:
+#      probability: 1.0  
+
 management:
   endpoint:
+    env:
+      enabled: false    
+    metrics:
+      enabled: false
+    loggers:
+      enabled: false    
     health:
       enabled: false
-    metrics:
-      enabled: true
     prometheus:
       enabled: true
   endpoints:
@@ -29,3 +38,8 @@ management:
     export:
       prometheus:
         enabled: true
+        
+apis:
+  payment: ${payment_url:http://payment}
+  shipping: ${shipping_url:http://shipping}
+  

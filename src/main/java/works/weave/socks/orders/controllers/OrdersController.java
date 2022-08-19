@@ -1,136 +1,139 @@
 package works.weave.socks.orders.controllers;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.springframework.http.HttpStatus.CREATED;
+import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
+import static org.springframework.http.HttpStatus.NOT_ACCEPTABLE;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
+
 import java.io.IOException;
-import java.util.Calendar;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.data.rest.webmvc.RepositoryRestController;
-import org.springframework.hateoas.Resource;
-import org.springframework.hateoas.mvc.TypeReferences;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 import works.weave.socks.orders.config.OrdersConfigurationProperties;
-import works.weave.socks.orders.entities.*;
+import works.weave.socks.orders.entities.Address;
+import works.weave.socks.orders.entities.Card;
+import works.weave.socks.orders.entities.Customer;
+import works.weave.socks.orders.entities.CustomerOrder;
+import works.weave.socks.orders.entities.Item;
+import works.weave.socks.orders.entities.Shipment;
 import works.weave.socks.orders.repositories.CustomerOrderRepository;
 import works.weave.socks.orders.resources.NewOrderResource;
 import works.weave.socks.orders.services.AsyncGetService;
 import works.weave.socks.orders.values.PaymentRequest;
 import works.weave.socks.orders.values.PaymentResponse;
 
-@RepositoryRestController
+@RequiredArgsConstructor
+@Log4j2
+@RestController
 public class OrdersController {
-  private final Logger LOG = LoggerFactory.getLogger(getClass());
 
-  @Autowired private OrdersConfigurationProperties config;
+  private static final String SELF_LINK = "self";
+  private static final float SHIPPING = 4.99F;
 
-  @Autowired private AsyncGetService asyncGetService;
-
-  @Autowired private CustomerOrderRepository customerOrderRepository;
+  private final OrdersConfigurationProperties config;
+  private final AsyncGetService asyncGetService;
+  private final CustomerOrderRepository customerOrderRepository;
 
   @Value(value = "${http.timeout:5}")
   private long timeout;
 
-  @ResponseStatus(HttpStatus.CREATED)
-  @RequestMapping(
-      path = "/orders",
-      consumes = MediaType.APPLICATION_JSON_VALUE,
-      method = RequestMethod.POST)
-  public @ResponseBody CustomerOrder newOrder(@RequestBody NewOrderResource item) {
+  @ResponseStatus(CREATED)
+  @PostMapping(path = "/orders", consumes = APPLICATION_JSON_VALUE)
+  @ResponseBody
+  CustomerOrder newOrder(@RequestBody NewOrderResource item) {
     try {
-
-      if (item.address == null
-          || item.customer == null
-          || item.card == null
-          || item.items == null) {
-        throw new InvalidOrderException(
+      if (item.getAddress() == null
+          || item.getCustomer() == null
+          || item.getCard() == null
+          || item.getItems() == null) {
+        throw new ResponseStatusException(
+            NOT_ACCEPTABLE,
             "Invalid order request. Order requires customer, address, card and items.");
       }
 
-      LOG.debug("Starting calls");
-      Future<Resource<Address>> addressFuture =
-          asyncGetService.getResource(item.address, new TypeReferences.ResourceType<Address>() {});
-      Future<Resource<Customer>> customerFuture =
-          asyncGetService.getResource(
-              item.customer, new TypeReferences.ResourceType<Customer>() {});
-      Future<Resource<Card>> cardFuture =
-          asyncGetService.getResource(item.card, new TypeReferences.ResourceType<Card>() {});
-      Future<List<Item>> itemsFuture =
-          asyncGetService.getDataList(item.items, new ParameterizedTypeReference<List<Item>>() {});
-      LOG.debug("End of calls.");
+      log.debug("Starting calls");
+      var addressFuture = asyncGetService.getResource(item.getAddress(), Address.class);
+      var customerFuture = asyncGetService.getResource(item.getCustomer(), Customer.class);
+      var cardFuture = asyncGetService.getResource(item.getCard(), Card.class);
+      var itemsFuture =
+          asyncGetService.getDataList(
+              item.getItems(), new ParameterizedTypeReference<List<Item>>() {});
+      log.debug("End of calls.");
 
-      float amount = calculateTotal(itemsFuture.get(timeout, TimeUnit.SECONDS));
+      var address = addressFuture.get(timeout, SECONDS);
+      var customer = customerFuture.get(timeout, SECONDS);
+      var card = cardFuture.get(timeout, SECONDS);
+      var items = itemsFuture.get(timeout, SECONDS);
+
+      var amount = calculateTotal(items);
 
       // Call payment service to make sure they've paid
-      PaymentRequest paymentRequest =
-          new PaymentRequest(
-              addressFuture.get(timeout, TimeUnit.SECONDS).getContent(),
-              cardFuture.get(timeout, TimeUnit.SECONDS).getContent(),
-              customerFuture.get(timeout, TimeUnit.SECONDS).getContent(),
-              amount);
-      LOG.info("Sending payment request: " + paymentRequest);
-      Future<PaymentResponse> paymentFuture =
+      var paymentRequest = new PaymentRequest(address, card, customer, amount);
+      log.info("Sending payment request: {}", paymentRequest);
+      var paymentFuture =
           asyncGetService.postResource(
               config.getPaymentUri(),
               paymentRequest,
               new ParameterizedTypeReference<PaymentResponse>() {});
-      PaymentResponse paymentResponse = paymentFuture.get(timeout, TimeUnit.SECONDS);
-      LOG.info("Received payment response: " + paymentResponse);
-      if (paymentResponse == null) {
-        throw new PaymentDeclinedException("Unable to parse authorisation packet");
+
+      var payment = paymentFuture.get(timeout, SECONDS);
+      log.info("Received payment response: {}", payment);
+
+      if (payment == null) {
+        throw new ResponseStatusException(
+            INTERNAL_SERVER_ERROR, "Unable to parse authorisation packet");
       }
-      if (!paymentResponse.isAuthorised()) {
-        throw new PaymentDeclinedException(paymentResponse.getMessage());
+      if (!payment.isAuthorised()) {
+        throw new ResponseStatusException(NOT_ACCEPTABLE, payment.getMessage());
       }
 
       // Ship
-      String customerId = parseId(customerFuture.get(timeout, TimeUnit.SECONDS).getId().getHref());
-      Future<Shipment> shipmentFuture =
+      var customerId = parseId(customer.getLink(SELF_LINK).get().getHref());
+      var shipmentFuture =
           asyncGetService.postResource(
               config.getShippingUri(),
               new Shipment(customerId),
               new ParameterizedTypeReference<Shipment>() {});
 
-      CustomerOrder order =
-          new CustomerOrder(
-              null,
-              customerId,
-              customerFuture.get(timeout, TimeUnit.SECONDS).getContent(),
-              addressFuture.get(timeout, TimeUnit.SECONDS).getContent(),
-              cardFuture.get(timeout, TimeUnit.SECONDS).getContent(),
-              itemsFuture.get(timeout, TimeUnit.SECONDS),
-              shipmentFuture.get(timeout, TimeUnit.SECONDS),
-              Calendar.getInstance().getTime(),
-              amount);
-      LOG.debug("Received data: " + order.toString());
+      var shipment = shipmentFuture.get(timeout, SECONDS);
 
-      CustomerOrder savedOrder = customerOrderRepository.save(order);
-      LOG.debug("Saved order: " + savedOrder);
+      var customerOrder =
+          new CustomerOrder(customerId, customer, address, card, items, shipment, amount);
+      log.debug("Received customerOrder: {}", customerOrder);
 
-      return savedOrder;
+      var savedCustomerOrder = customerOrderRepository.save(customerOrder);
+      log.debug("Saved customerOrder: {}", savedCustomerOrder);
+
+      return savedCustomerOrder;
     } catch (TimeoutException e) {
-      throw new IllegalStateException(
-          "Unable to create order due to timeout from one of the services.", e);
+      throw new ResponseStatusException(
+          INTERNAL_SERVER_ERROR,
+          "Unable to create order due to timeout from one of the services.",
+          e);
     } catch (InterruptedException | IOException | ExecutionException e) {
-      throw new IllegalStateException("Unable to create order due to unspecified IO error.", e);
+      throw new ResponseStatusException(
+          INTERNAL_SERVER_ERROR, "Unable to create order due to unspecified IO error.", e);
     }
   }
 
-  private String parseId(String href) {
-    Pattern idPattern = Pattern.compile("[\\w-]+$");
-    Matcher matcher = idPattern.matcher(href);
+  private static String parseId(String href) {
+    var idPattern = Pattern.compile("[\\w-]+$");
+    var matcher = idPattern.matcher(href);
     if (!matcher.find()) {
-      throw new IllegalStateException("Could not parse user ID from: " + href);
+      throw new ResponseStatusException(
+          NOT_ACCEPTABLE, String.format("Could not parse user ID from: %s", href));
     }
     return matcher.group(0);
   }
@@ -153,25 +156,10 @@ public class OrdersController {
   //        return ResponseEntity.ok(resources);
   //    }
 
-  private float calculateTotal(List<Item> items) {
-    float amount = 0F;
-    float shipping = 4.99F;
-    amount += items.stream().mapToDouble(i -> i.getQuantity() * i.getUnitPrice()).sum();
-    amount += shipping;
+  private static float calculateTotal(List<Item> items) {
+    var amount = 0F;
+    amount += items.stream().mapToDouble(item -> item.getQuantity() * item.getUnitPrice()).sum();
+    amount += SHIPPING;
     return amount;
-  }
-
-  @ResponseStatus(value = HttpStatus.NOT_ACCEPTABLE)
-  public class PaymentDeclinedException extends IllegalStateException {
-    public PaymentDeclinedException(String s) {
-      super(s);
-    }
-  }
-
-  @ResponseStatus(value = HttpStatus.NOT_ACCEPTABLE)
-  public class InvalidOrderException extends IllegalStateException {
-    public InvalidOrderException(String s) {
-      super(s);
-    }
   }
 }

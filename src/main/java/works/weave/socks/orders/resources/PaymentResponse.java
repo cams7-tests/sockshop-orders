@@ -1,35 +1,17 @@
 package works.weave.socks.orders.resources;
 
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
 public class PaymentResponse {
   private boolean authorised = false;
   private String message;
 
-  // For jackson
-  public PaymentResponse() {}
-
   public PaymentResponse(boolean authorised, String message) {
+    this();
     this.authorised = authorised;
     this.message = message;
-  }
-
-  @Override
-  public String toString() {
-    return "PaymentResponse{" + "authorised=" + authorised + ", message=" + message + '}';
-  }
-
-  public boolean isAuthorised() {
-    return authorised;
-  }
-
-  public void setAuthorised(boolean authorised) {
-    this.authorised = authorised;
-  }
-
-  public void setMessage(String message) {
-    this.message = message;
-  }
-
-  public String getMessage() {
-    return message;
   }
 }

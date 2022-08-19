@@ -1,35 +1,40 @@
 package works.weave.socks.orders.controllers;
 
+import static org.springframework.http.HttpStatus.OK;
+
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
 import works.weave.socks.orders.entities.HealthCheck;
 
+@RequiredArgsConstructor
 @RestController
 public class HealthCheckController {
 
-  @Autowired private MongoTemplate mongoTemplate;
+  private static final String STATUS_OK = "OK";
 
-  @ResponseStatus(HttpStatus.OK)
-  @RequestMapping(method = RequestMethod.GET, path = "/health")
-  public @ResponseBody Map<String, List<HealthCheck>> getHealth() {
-    Map<String, List<HealthCheck>> map = new HashMap<String, List<HealthCheck>>();
-    List<HealthCheck> healthChecks = new ArrayList<HealthCheck>();
-    Date dateNow = Calendar.getInstance().getTime();
+  private final MongoTemplate mongoTemplate;
 
-    HealthCheck app = new HealthCheck("orders", "OK", dateNow);
-    HealthCheck database = new HealthCheck("orders-db", "OK", dateNow);
+  @ResponseStatus(OK)
+  @GetMapping(path = "/health")
+  @ResponseBody
+  Map<String, List<HealthCheck>> getHealth() {
+    var map = new HashMap<String, List<HealthCheck>>();
+    var healthChecks = new ArrayList<HealthCheck>();
+
+    var app = new HealthCheck("orders", STATUS_OK);
+    var database = new HealthCheck("orders-db", STATUS_OK);
 
     try {
       mongoTemplate.executeCommand("{ buildInfo: 1 }");
-    } catch (Exception e) {
+    } catch (RuntimeException e) {
       database.setStatus("err");
     }
 

@@ -2,18 +2,24 @@ package works.weave.socks.orders.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.handler.MappedInterceptor;
-import works.weave.socks.orders.middleware.HTTPMonitoringInterceptor;
+import org.springframework.web.client.RestTemplate;
+// import org.springframework.web.servlet.handler.MappedInterceptor;
+// import works.weave.socks.orders.middleware.HTTPMonitoringInterceptor;
 
 @Configuration
 public class WebMvcConfig {
-  @Bean
-  HTTPMonitoringInterceptor httpMonitoringInterceptor() {
-    return new HTTPMonitoringInterceptor();
-  }
+  //  @Bean
+  //  HTTPMonitoringInterceptor httpMonitoringInterceptor() {
+  //    return new HTTPMonitoringInterceptor();
+  //  }
+  //
+  //  @Bean
+  //  public MappedInterceptor myMappedInterceptor(HTTPMonitoringInterceptor interceptor) {
+  //    return new MappedInterceptor(new String[] {"/**"}, interceptor);
+  //  }
 
   @Bean
-  public MappedInterceptor myMappedInterceptor(HTTPMonitoringInterceptor interceptor) {
-    return new MappedInterceptor(new String[] {"/**"}, interceptor);
+  RestTemplate restTemplate() {
+    return new RestTemplate();
   }
 }

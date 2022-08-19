@@ -1,0 +1,60 @@
+{
+   "customers":[
+      {
+         "id":"57a98d98e4b00679b4a830b2",
+         "firstName":"User",
+         "lastName":"Name",
+         "username":"user",         
+         "_links":{
+            "self":{
+               "href":"http://localhost:3000/customers/57a98d98e4b00679b4a830b2"
+            },
+            "customer":{
+               "href":"http://localhost:3000/customers/57a98d98e4b00679b4a830b2"
+            },
+            "addresses":{
+               "href":"http://localhost:3000/customers/57a98d98e4b00679b4a830b2/addresses"
+            },
+            "cards":{
+               "href":"http://localhost:3000/customers/57a98d98e4b00679b4a830b2/cards"
+            }                        
+         }
+      }
+   ],
+   "addresses":[
+      {
+         "id":"57a98d98e4b00679b4a830b0",
+         "customerId": "57a98d98e4b00679b4a830b2",
+         "street":"Whitelees Road",
+         "number":"246",
+         "country":"United Kingdom",
+         "city":"Glasgow",
+         "postcode":"G67 3DL",         
+         "_links":{
+            "self":{
+               "href":"http://localhost:3000/addresses/57a98d98e4b00679b4a830b0"
+            },
+            "address":{
+               "href":"http://localhost:3000/addresses/57a98d98e4b00679b4a830b0"
+            }            
+         }	 
+      }
+   ],
+   "cards":[
+      {
+         "id":"57a98d98e4b00679b4a830b1",
+         "customerId": "57a98d98e4b00679b4a830b2",
+         "longNum":"5544154011345918",
+         "expires":"08/19",
+         "ccv":"958",         
+         "_links":{
+            "self":{
+               "href":"http://localhost:3000/cards/57a98d98e4b00679b4a830b1"
+            },
+            "card":{
+               "href":"http://localhost:3000/cards/57a98d98e4b00679b4a830b1"
+            }            
+         }         
+      }
+   ]
+}

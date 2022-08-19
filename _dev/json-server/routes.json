@@ -1,0 +1,4 @@
+{
+  "/carts/:customerId": "/carts?customerId=:customerId",
+  "/carts/:customerId/items": "/items?customerId=:customerId"
+}
