@@ -110,7 +110,14 @@ public class OrdersController {
       var shipment = shipmentFuture.get(timeout, SECONDS);
 
       var customerOrder =
-          new CustomerOrder(customerId, customer, address, card, items, shipment, amount);
+          new CustomerOrder(
+              customerId,
+              customer.removeLinks(),
+              address.removeLinks(),
+              card.removeLinks(),
+              items,
+              shipment,
+              amount);
       log.debug("Received customerOrder: {}", customerOrder);
 
       var savedCustomerOrder = customerOrderRepository.save(customerOrder);
