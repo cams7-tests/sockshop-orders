@@ -1,9 +1,12 @@
 package works.weave.socks.orders.controllers;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 import static org.springframework.http.HttpStatus.NOT_ACCEPTABLE;
+import static org.springframework.http.HttpStatus.OK;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 import java.io.IOException;
@@ -11,13 +14,17 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -37,10 +44,12 @@ import works.weave.socks.orders.values.PaymentResponse;
 @RequiredArgsConstructor
 @Log4j2
 @RestController
+@RequestMapping(path = "/orders", produces = APPLICATION_JSON_VALUE)
 public class OrdersController {
 
   private static final String SELF_LINK = "self";
-  private static final float SHIPPING = 4.99F;
+  private static final String ORDER_LINK = "order";
+  private static final float SHIPPING = 4.99f;
 
   private final OrdersConfigurationProperties config;
   private final AsyncGetService asyncGetService;
@@ -50,8 +59,7 @@ public class OrdersController {
   private long timeout;
 
   @ResponseStatus(CREATED)
-  @PostMapping(path = "/orders", consumes = APPLICATION_JSON_VALUE)
-  @ResponseBody
+  @PostMapping(consumes = APPLICATION_JSON_VALUE)
   CustomerOrder newOrder(@RequestBody NewOrderResource item) {
     try {
       if (item.getAddress() == null
@@ -110,14 +118,7 @@ public class OrdersController {
       var shipment = shipmentFuture.get(timeout, SECONDS);
 
       var customerOrder =
-          new CustomerOrder(
-              customerId,
-              customer.removeLinks(),
-              address.removeLinks(),
-              card.removeLinks(),
-              items,
-              shipment,
-              amount);
+          new CustomerOrder(customerId, customer, address, card, items, shipment, amount);
       log.debug("Received customerOrder: {}", customerOrder);
 
       var savedCustomerOrder = customerOrderRepository.save(customerOrder);
@@ -135,6 +136,26 @@ public class OrdersController {
     }
   }
 
+  @ResponseStatus(OK)
+  @GetMapping(value = "/{id}")
+  CustomerOrder getOrder(@PathVariable String id) {
+    var customerOrder = customerOrderRepository.findById(id).orElseThrow();
+    addLink(customerOrder);
+    return customerOrder;
+  }
+
+  @ResponseStatus(OK)
+  @GetMapping(value = "/search/customerId")
+  List<CustomerOrder> getOrders(@RequestParam("custId") String customerId) {
+    return customerOrderRepository.findByCustomerIdOrderByDateAsc(customerId).stream()
+        .map(
+            customerOrder -> {
+              addLink(customerOrder);
+              return customerOrder;
+            })
+        .collect(Collectors.toList());
+  }
+
   private static String parseId(String href) {
     var idPattern = Pattern.compile("[\\w-]+$");
     var matcher = idPattern.matcher(href);
@@ -145,28 +166,16 @@ public class OrdersController {
     return matcher.group(0);
   }
 
-  //    TODO: Add link to shipping
-  //    @RequestMapping(method = RequestMethod.GET, value = "/orders")
-  //    public @ResponseBody
-  //    ResponseEntity<?> getOrders() {
-  //        List<CustomerOrder> customerOrders = customerOrderRepository.findAll();
-  //
-  //        Resources<CustomerOrder> resources = new Resources<>(customerOrders);
-  //
-  //        resources.forEach(r -> r);
-  //
-  //        resources.add(linkTo(methodOn(ShippingController.class,
-  // CustomerOrder.getShipment::ge)).withSelfRel());
-  //
-  //        // add other links as needed
-  //
-  //        return ResponseEntity.ok(resources);
-  //    }
-
   private static float calculateTotal(List<Item> items) {
-    var amount = 0F;
+    var amount = 0f;
     amount += items.stream().mapToDouble(item -> item.getQuantity() * item.getUnitPrice()).sum();
     amount += SHIPPING;
     return amount;
+  }
+
+  private static void addLink(CustomerOrder customerOrder) {
+    var link = linkTo(methodOn(OrdersController.class).getOrder(customerOrder.getId()));
+    customerOrder.add(link.withSelfRel());
+    customerOrder.add(link.withRel(ORDER_LINK));
   }
 }

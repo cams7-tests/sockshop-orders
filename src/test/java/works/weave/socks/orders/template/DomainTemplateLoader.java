@@ -17,6 +17,7 @@ public class DomainTemplateLoader implements TemplateLoader {
   public static final String VALID_PAYMENT = "VALID_PAYMENT";
   public static final String INVALID_PAYMENT = "INVALID_PAYMENT";
   public static final String SHIPMENT = "SHIPMENT";
+  public static final String VALID_CUSTOMER_ORDER = "VALID_CUSTOMER_ORDER";
 
   @Override
   public void load() {
@@ -28,5 +29,6 @@ public class DomainTemplateLoader implements TemplateLoader {
     ItemTemplate.loadTemplates();
     PaymentResponseTemplate.loadTemplates();
     ShipmentTemplate.loadTemplates();
+    CustomerOrderTemplate.loadTemplates();
   }
 }

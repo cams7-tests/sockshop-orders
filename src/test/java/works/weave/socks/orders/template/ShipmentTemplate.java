@@ -2,8 +2,8 @@ package works.weave.socks.orders.template;
 
 import static br.com.six2six.fixturefactory.Fixture.of;
 import static lombok.AccessLevel.PRIVATE;
+import static works.weave.socks.orders.template.CustomerTemplate.CUSTOMER_ID;
 import static works.weave.socks.orders.template.DomainTemplateLoader.SHIPMENT;
-import static works.weave.socks.orders.template.NewOrderResourceTemplate.CUSTOMER_ID;
 
 import br.com.six2six.fixturefactory.Rule;
 import java.util.UUID;

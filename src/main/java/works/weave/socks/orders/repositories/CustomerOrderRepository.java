@@ -1,11 +1,11 @@
 package works.weave.socks.orders.repositories;
 
+import java.util.Collection;
 import org.springframework.data.mongodb.repository.MongoRepository;
-import org.springframework.data.rest.core.annotation.RepositoryRestResource;
+import org.springframework.stereotype.Repository;
 import works.weave.socks.orders.entities.CustomerOrder;
 
-@RepositoryRestResource // (path = "orders", itemResourceRel = "order")
+@Repository
 public interface CustomerOrderRepository extends MongoRepository<CustomerOrder, String> {
-  //  @RestResource(path = "customerId")
-  //  List<CustomerOrder> findByCustomerId(@Param("custId") String id);
+  Collection<CustomerOrder> findByCustomerIdOrderByDateAsc(String customerId);
 }
