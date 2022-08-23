@@ -39,6 +39,10 @@ management:
       prometheus:
         enabled: true
         
+springdoc:
+  api-docs:
+    path: /api-docs
+        
 apis:
   payment: ${payment_url:http://payment}
   shipping: ${shipping_url:http://shipping}

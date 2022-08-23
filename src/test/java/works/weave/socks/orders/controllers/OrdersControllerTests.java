@@ -4,6 +4,7 @@ import static br.com.six2six.fixturefactory.Fixture.from;
 import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 import static org.apache.commons.lang3.ClassUtils.getPackageName;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
@@ -21,12 +22,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 import static works.weave.socks.orders.entities.CustomerOrder.COLLECTION_NAME;
-import static works.weave.socks.orders.template.AddressTemplate.GET_ADDRESS_URL;
-import static works.weave.socks.orders.template.CardTemplate.GET_CARD_URL;
 import static works.weave.socks.orders.template.CustomerOrderTemplate.GET_CUSTOMER_ORDER_URL;
 import static works.weave.socks.orders.template.CustomerOrderTemplate.SHIPPING;
-import static works.weave.socks.orders.template.CustomerTemplate.GET_CUSTOMER_ADDRESS_URL;
-import static works.weave.socks.orders.template.CustomerTemplate.GET_CUSTOMER_CARD_URL;
+import static works.weave.socks.orders.template.CustomerTemplate.CUSTOMER_ID;
 import static works.weave.socks.orders.template.CustomerTemplate.GET_CUSTOMER_URL;
 import static works.weave.socks.orders.template.DomainTemplateLoader.INVALID_ITEM;
 import static works.weave.socks.orders.template.DomainTemplateLoader.INVALID_NEW_ORDER_RESOURCE;
@@ -81,11 +79,6 @@ import works.weave.socks.orders.values.PaymentResponse;
 public class OrdersControllerTests {
 
   private static final String SELF_LINK = "self";
-  private static final String CUSTOMER_LINK = "customer";
-  private static final String ADDRESSES_LINK = "addresses";
-  private static final String CARDS_LINK = "cards";
-  private static final String ADDRESS_LINK = "address";
-  private static final String CARD_LINK = "card";
   private static final String ORDER_LINK = "order";
 
   private static final URI PAYMENT_URL = URI.create("http://payment/paymentAuth");
@@ -121,11 +114,9 @@ public class OrdersControllerTests {
     NewOrderResource newOrderResource =
         from(NewOrderResource.class).gimme(VALID_NEW_ORDER_RESOURCE);
     Address address = from(Address.class).gimme(VALID_ADDRESS);
-    addAddressLink(address);
     Card card = from(Card.class).gimme(VALID_CARD);
-    addCardLink(card);
     Customer customer = from(Customer.class).gimme(VALID_CUSTOMER);
-    addCustomerLink(customer);
+    customer.add(Link.of(GET_CUSTOMER_URL, SELF_LINK));
 
     Item item = from(Item.class).gimme(VALID_ITEM);
     PaymentResponse paymentResponse = from(PaymentResponse.class).gimme(VALID_PAYMENT);
@@ -160,16 +151,8 @@ public class OrdersControllerTests {
         .andExpect(jsonPath("$.id", notNullValue()))
         .andExpect(jsonPath("$.customerId", is(customer.getId())))
         .andExpect(jsonPath("$.customer.id", is(customer.getId())))
-        .andExpect(jsonPath("$.customer._links.self.href", is(GET_CUSTOMER_URL)))
-        .andExpect(jsonPath("$.customer._links.customer.href", is(GET_CUSTOMER_URL)))
-        .andExpect(jsonPath("$.customer._links.addresses.href", is(GET_CUSTOMER_ADDRESS_URL)))
-        .andExpect(jsonPath("$.customer._links.cards.href", is(GET_CUSTOMER_CARD_URL)))
         .andExpect(jsonPath("$.address.id", is(address.getId())))
-        .andExpect(jsonPath("$.address._links.self.href", is(GET_ADDRESS_URL)))
-        .andExpect(jsonPath("$.address._links.address.href", is(GET_ADDRESS_URL)))
         .andExpect(jsonPath("$.card.id", is(card.getId())))
-        .andExpect(jsonPath("$.card._links.self.href", is(GET_CARD_URL)))
-        .andExpect(jsonPath("$.card._links.card.href", is(GET_CARD_URL)))
         .andExpect(jsonPath("$.shipment.name", is(customer.getId())))
         .andExpect(jsonPath("$.date", notNullValue()))
         .andExpect(jsonPath("$.total", notNullValue()));
@@ -352,9 +335,6 @@ public class OrdersControllerTests {
   @Test
   void whenGetOrder_thenReturns200() throws Exception {
     CustomerOrder customerOrder = from(CustomerOrder.class).gimme(VALID_CUSTOMER_ORDER);
-    addCustomerLink(customerOrder.getCustomer());
-    addCardLink(customerOrder.getCard());
-    addAddressLink(customerOrder.getAddress());
 
     mongoTemplate.insert(customerOrder, COLLECTION_NAME);
 
@@ -365,16 +345,8 @@ public class OrdersControllerTests {
         .andExpect(jsonPath("$.id", is(customerOrder.getId())))
         .andExpect(jsonPath("$.customerId", is(customerOrder.getCustomerId())))
         .andExpect(jsonPath("$.customer.id", is(customerOrder.getCustomer().getId())))
-        .andExpect(jsonPath("$.customer._links.self.href", is(GET_CUSTOMER_URL)))
-        .andExpect(jsonPath("$.customer._links.customer.href", is(GET_CUSTOMER_URL)))
-        .andExpect(jsonPath("$.customer._links.addresses.href", is(GET_CUSTOMER_ADDRESS_URL)))
-        .andExpect(jsonPath("$.customer._links.cards.href", is(GET_CUSTOMER_CARD_URL)))
         .andExpect(jsonPath("$.address.id", is(customerOrder.getAddress().getId())))
-        .andExpect(jsonPath("$.address._links.self.href", is(GET_ADDRESS_URL)))
-        .andExpect(jsonPath("$.address._links.address.href", is(GET_ADDRESS_URL)))
         .andExpect(jsonPath("$.card.id", is(customerOrder.getCard().getId())))
-        .andExpect(jsonPath("$.card._links.self.href", is(GET_CARD_URL)))
-        .andExpect(jsonPath("$.card._links.card.href", is(GET_CARD_URL)))
         .andExpect(jsonPath("$.items", hasSize(1)))
         .andExpect(
             jsonPath("$.items[0].id", is(((List<Item>) customerOrder.getItems()).get(0).getId())))
@@ -390,9 +362,6 @@ public class OrdersControllerTests {
   @Test
   void whenGetOrders_thenReturns200() throws Exception {
     CustomerOrder customerOrder = from(CustomerOrder.class).gimme(VALID_CUSTOMER_ORDER);
-    addCustomerLink(customerOrder.getCustomer());
-    addCardLink(customerOrder.getCard());
-    addAddressLink(customerOrder.getAddress());
 
     mongoTemplate.insert(customerOrder, COLLECTION_NAME);
 
@@ -407,24 +376,11 @@ public class OrdersControllerTests {
         .andExpect(jsonPath("$.[0].id", is(customerOrder.getId())))
         .andExpect(jsonPath("$.[0].customerId", is(customerOrder.getCustomerId())))
         .andExpect(jsonPath("$.[0].customer.id", is(customerOrder.getCustomer().getId())))
-        .andExpect(jsonPath("$.[0].customer._links[0].rel", is(SELF_LINK)))
-        .andExpect(jsonPath("$.[0].customer._links[0].href", is(GET_CUSTOMER_URL)))
-        .andExpect(jsonPath("$.[0].customer._links[1].rel", is(CUSTOMER_LINK)))
-        .andExpect(jsonPath("$.[0].customer._links[1].href", is(GET_CUSTOMER_URL)))
-        .andExpect(jsonPath("$.[0].customer._links[2].rel", is(ADDRESSES_LINK)))
-        .andExpect(jsonPath("$.[0].customer._links[2].href", is(GET_CUSTOMER_ADDRESS_URL)))
-        .andExpect(jsonPath("$.[0].customer._links[3].rel", is(CARDS_LINK)))
-        .andExpect(jsonPath("$.[0].customer._links[3].href", is(GET_CUSTOMER_CARD_URL)))
+        .andExpect(jsonPath("$.[0].customer._links", empty()))
         .andExpect(jsonPath("$.[0].address.id", is(customerOrder.getAddress().getId())))
-        .andExpect(jsonPath("$.[0].address._links[0].rel", is(SELF_LINK)))
-        .andExpect(jsonPath("$.[0].address._links[0].href", is(GET_ADDRESS_URL)))
-        .andExpect(jsonPath("$.[0].address._links[1].rel", is(ADDRESS_LINK)))
-        .andExpect(jsonPath("$.[0].address._links[1].href", is(GET_ADDRESS_URL)))
+        .andExpect(jsonPath("$.[0].address._links", empty()))
         .andExpect(jsonPath("$.[0].card.id", is(customerOrder.getCard().getId())))
-        .andExpect(jsonPath("$.[0].card._links[0].rel", is(SELF_LINK)))
-        .andExpect(jsonPath("$.[0].card._links[0].href", is(GET_CARD_URL)))
-        .andExpect(jsonPath("$.[0].card._links[1].rel", is(CARD_LINK)))
-        .andExpect(jsonPath("$.[0].card._links[1].href", is(GET_CARD_URL)))
+        .andExpect(jsonPath("$.[0].card._links", empty()))
         .andExpect(jsonPath("$.[0].items", hasSize(1)))
         .andExpect(
             jsonPath(
@@ -440,6 +396,13 @@ public class OrdersControllerTests {
     mongoTemplate.dropCollection(COLLECTION_NAME);
   }
 
+  @Test
+  void whenNotFoundOrders_thenReturns404() throws Exception {
+    mockMvc
+        .perform(get(String.format("/orders/search/customerId?sort=date&custId=%s", CUSTOMER_ID)))
+        .andExpect(status().isNotFound());
+  }
+
   private static PaymentRequest getPaymentRequest(
       Address address, Card card, Customer customer, float amount) {
     return new PaymentRequest(address, card, customer, amount);
@@ -447,23 +410,6 @@ public class OrdersControllerTests {
 
   private static final String getFormattedDate(LocalDateTime date) {
     return date.format(ISO_LOCAL_DATE_TIME).substring(0, 23);
-  }
-
-  private static void addCustomerLink(Customer customer) {
-    customer.add(Link.of(GET_CUSTOMER_URL, SELF_LINK));
-    customer.add(Link.of(GET_CUSTOMER_URL, CUSTOMER_LINK));
-    customer.add(Link.of(GET_CUSTOMER_ADDRESS_URL, ADDRESSES_LINK));
-    customer.add(Link.of(GET_CUSTOMER_CARD_URL, CARDS_LINK));
-  }
-
-  private static void addCardLink(Card card) {
-    card.add(Link.of(GET_CARD_URL, SELF_LINK));
-    card.add(Link.of(GET_CARD_URL, CARD_LINK));
-  }
-
-  private static void addAddressLink(Address address) {
-    address.add(Link.of(GET_ADDRESS_URL, SELF_LINK));
-    address.add(Link.of(GET_ADDRESS_URL, ADDRESS_LINK));
   }
 
   private static class AsyncResultFake<T> extends AsyncResult<T> {

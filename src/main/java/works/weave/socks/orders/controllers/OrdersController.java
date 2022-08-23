@@ -6,9 +6,18 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 import static org.springframework.http.HttpStatus.NOT_ACCEPTABLE;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.OK;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
+import static org.springframework.util.CollectionUtils.isEmpty;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -41,6 +50,7 @@ import works.weave.socks.orders.services.AsyncGetService;
 import works.weave.socks.orders.values.PaymentRequest;
 import works.weave.socks.orders.values.PaymentResponse;
 
+@Tag(name = "Customer Order Service")
 @RequiredArgsConstructor
 @Log4j2
 @RestController
@@ -58,6 +68,18 @@ public class OrdersController {
   @Value(value = "${http.timeout:5}")
   private long timeout;
 
+  @Operation(description = "Create an customer order")
+  @ApiResponses({
+    @ApiResponse(responseCode = "201", description = "Created"),
+    @ApiResponse(
+        responseCode = "406",
+        description = "Not Acceptable",
+        content = @Content(schema = @Schema(hidden = true))),
+    @ApiResponse(
+        responseCode = "500",
+        description = "Internal Server Error",
+        content = @Content(schema = @Schema(hidden = true)))
+  })
   @ResponseStatus(CREATED)
   @PostMapping(consumes = APPLICATION_JSON_VALUE)
   CustomerOrder newOrder(@RequestBody NewOrderResource item) {
@@ -118,7 +140,14 @@ public class OrdersController {
       var shipment = shipmentFuture.get(timeout, SECONDS);
 
       var customerOrder =
-          new CustomerOrder(customerId, customer, address, card, items, shipment, amount);
+          new CustomerOrder(
+              customerId,
+              customer.removeLinks(),
+              address.removeLinks(),
+              card.removeLinks(),
+              items,
+              shipment,
+              amount);
       log.debug("Received customerOrder: {}", customerOrder);
 
       var savedCustomerOrder = customerOrderRepository.save(customerOrder);
@@ -136,18 +165,40 @@ public class OrdersController {
     }
   }
 
+  @Operation(description = "Get an customer order by id")
+  @ApiResponses({@ApiResponse(responseCode = "200", description = "Ok")})
   @ResponseStatus(OK)
   @GetMapping(value = "/{id}")
-  CustomerOrder getOrder(@PathVariable String id) {
+  CustomerOrder getOrder(
+      @Parameter(name = "id", required = true, description = "Customer order id") @PathVariable
+          String id) {
     var customerOrder = customerOrderRepository.findById(id).orElseThrow();
     addLink(customerOrder);
     return customerOrder;
   }
 
+  @Operation(description = "Get customer orders by customer id")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "Ok"),
+    @ApiResponse(
+        responseCode = "404",
+        description = "Not Found",
+        content = @Content(schema = @Schema(hidden = true)))
+  })
   @ResponseStatus(OK)
   @GetMapping(value = "/search/customerId")
-  List<CustomerOrder> getOrders(@RequestParam("custId") String customerId) {
-    return customerOrderRepository.findByCustomerIdOrderByDateAsc(customerId).stream()
+  List<CustomerOrder> getOrders(
+      @Parameter(name = "custId", required = true, description = "Customer id")
+          @RequestParam("custId")
+          String customerId) {
+    var orders = customerOrderRepository.findByCustomerIdOrderByDateAsc(customerId);
+
+    if (isEmpty(orders)) {
+      throw new ResponseStatusException(
+          NOT_FOUND, String.format("No orders found for user: %s", customerId));
+    }
+
+    return orders.stream()
         .map(
             customerOrder -> {
               addLink(customerOrder);

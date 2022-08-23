@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>works.weave.microservices-demo</groupId>
     	<artifactId>orders</artifactId>
-    	<version>1.0.2-SNAPSHOT</version>
+    	<version>1.0.3-SNAPSHOT</version>
 	<name>orders</name>
     	<description>Orders service for microservices-demo application</description>
 	<properties>
@@ -49,15 +49,20 @@
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-sleuth-zipkin</artifactId>
 		</dependency-->
-                <dependency>
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-configuration-processor</artifactId>
 			<optional>true</optional>
 		</dependency>
-                <dependency>
+		<dependency>
 		    <groupId>org.springframework.boot</groupId>
 		    <artifactId>spring-boot-starter-hateoas</artifactId>
-		</dependency>	
+		</dependency>
+		<dependency>
+			<groupId>org.springdoc</groupId>
+    		<artifactId>springdoc-openapi-ui</artifactId>
+    		<version>1.6.11</version>
+		</dependency>
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

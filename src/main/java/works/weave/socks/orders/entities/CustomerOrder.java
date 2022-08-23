@@ -5,6 +5,7 @@ import static works.weave.socks.orders.entities.CustomerOrder.COLLECTION_NAME;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -34,14 +35,32 @@ public class CustomerOrder extends RepresentationModel<CustomerOrder> {
   public static final String COLLECTION_NAME = "customerOrder";
   private static final String LINKS_PROPERTY = "_links";
 
-  @Id private String id;
+  @Schema(example = "6303c1ee65468d793b17e711", description = "Customer order id")
+  @Id
+  private String id;
+
+  @Schema(example = "57a98d98e4b00679b4a830b2", description = "Customer id")
   private String customerId;
+
+  @Schema(description = "Customer")
   private Customer customer;
+
+  @Schema(description = "Address")
   private Address address;
+
+  @Schema(description = "Card")
   private Card card;
+
+  @Schema(description = "Items")
   private Collection<Item> items;
+
+  @Schema(description = "Shipment")
   private Shipment shipment;
+
+  @Schema(example = "2022-08-22T17:50:38.688333", description = "Customer order datetime")
   private LocalDateTime date;
+
+  @Schema(example = "58.99", description = "Customer order total")
   private float total;
 
   public CustomerOrder(
@@ -70,6 +89,7 @@ public class CustomerOrder extends RepresentationModel<CustomerOrder> {
     super.add(links);
   }
 
+  @Schema(hidden = true)
   @JsonProperty(LINKS_PROPERTY)
   @Override
   public Links getLinks() {

@@ -2,6 +2,10 @@ package works.weave.socks.orders.controllers;
 
 import static org.springframework.http.HttpStatus.OK;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -14,6 +18,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import works.weave.socks.orders.entities.HealthCheck;
 
+@Tag(name = "Health Check Service")
 @RequiredArgsConstructor
 @RestController
 public class HealthCheckController {
@@ -22,6 +27,8 @@ public class HealthCheckController {
 
   private final MongoTemplate mongoTemplate;
 
+  @Operation(description = "Get health")
+  @ApiResponses({@ApiResponse(responseCode = "200", description = "Ok")})
   @ResponseStatus(OK)
   @GetMapping(path = "/health")
   @ResponseBody
