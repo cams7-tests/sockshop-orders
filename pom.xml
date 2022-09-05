@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>works.weave.microservices-demo</groupId>
     	<artifactId>orders</artifactId>
-    	<version>1.0.3-SNAPSHOT</version>
+    	<version>1.0.4-SNAPSHOT</version>
 	<name>orders</name>
     	<description>Orders service for microservices-demo application</description>
 	<properties>
